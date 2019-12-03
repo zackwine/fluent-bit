@@ -77,6 +77,8 @@ void do_test(char *system, ...)
     /* initialize */
     set_result(0);
 
+    flb_init_env();
+
     ctx = flb_create();
 
     in_ffd = flb_input(ctx, (char *) system, NULL);
@@ -151,7 +153,7 @@ void flb_test_in_proc_flush()
 }
 void flb_test_in_head_flush()
 {
-    do_test("head", 
+    do_test("head",
             "interval_sec", "0",
             "interval_nsec", "500000000",
             "File", "/dev/urandom",
@@ -234,4 +236,3 @@ TEST_LIST = {
 #endif
     {NULL, NULL}
 };
-
