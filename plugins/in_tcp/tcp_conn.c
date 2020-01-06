@@ -98,6 +98,9 @@ static ssize_t parse_payload_json(struct tcp_conn *conn)
         conn->pack_state.multiple = FLB_TRUE;
         return -1;
     }
+    else if (ret == -1) {
+        return -1;
+    }
 
     /* Process the packaged JSON and return the last byte used */
     process_pack(conn, pack, out_size);
@@ -215,6 +218,7 @@ int tcp_conn_event(void *data)
                       conn->buf_data[0]);
             consume_bytes(conn->buf_data, 1, conn->buf_len);
             conn->buf_len--;
+            conn->buf_data[conn->buf_len] = '\0';
         }
 
         /* JSON Format handler */
@@ -233,9 +237,12 @@ int tcp_conn_event(void *data)
         }
         else if (ctx->format == FLB_TCP_FMT_NONE) {
             ret_payload = parse_payload_none(conn);
-            if (ret_payload <= 0) {
+            if (ret_payload == 0) {
+                return -1;
+            }
+            else if (ret_payload == -1) {
                 conn->buf_len = 0;
-                return (int) ret_payload;
+                return -1;
             }
         }
 

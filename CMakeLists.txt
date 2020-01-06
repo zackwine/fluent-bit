@@ -4,7 +4,7 @@ project(fluent-bit)
 # Fluent Bit Version
 set(FLB_VERSION_MAJOR  1)
 set(FLB_VERSION_MINOR  3)
-set(FLB_VERSION_PATCH  0)
+set(FLB_VERSION_PATCH  5)
 set(FLB_VERSION_STR "${FLB_VERSION_MAJOR}.${FLB_VERSION_MINOR}.${FLB_VERSION_PATCH}")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -654,11 +654,14 @@ endif()
 # Installer Generation (Cpack)
 # ============================
 
+# Generic package information
 set(CPACK_PACKAGE_VERSION ${FLB_VERSION_STR})
 set(CPACK_PACKAGE_NAME "td-agent-bit")
 set(CPACK_PACKAGE_RELEASE 1)
 set(CPACK_PACKAGE_CONTACT "Eduardo Silva <eduardo@treasure-data.com>")
 set(CPACK_PACKAGE_VENDOR "Treasure Data")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/cpack/description")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Fast data collector for Linux")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/td-agent-bit")
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/")
@@ -674,12 +677,29 @@ if(FLB_SYSTEM_WINDOWS)
   endif()
 endif()
 
+# Debian package setup and name sanitizer
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+find_program(DPKG_PROGRAM dpkg DOC "dpkg program of Debian-based systems")
+if(DPKG_PROGRAM)
+  execute_process(
+    COMMAND ${DPKG_PROGRAM} --print-architecture
+    OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  #set(CPACK_PACKAGE_FILE_NAME
+  #  "${CPACK_PACKAGE_NAME_LOWERCASE}_${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+
+  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+    ${CMAKE_CURRENT_SOURCE_DIR}/debian/conffiles
+    )
+endif()
+
 # RPM Generation information
 set(CPACK_RPM_PACKAGE_GROUP "System Environment/Daemons")
 set(CPACK_RPM_PACKAGE_LICENSE "Apache v2.0")
 set(CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE})
-set(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/cpack/description")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Fast data collector for Linux")
 set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
 set(CPACK_RPM_USER_FILELIST
   "%config(noreplace) /etc/${FLB_OUT_NAME}/${FLB_OUT_NAME}.conf"
@@ -695,9 +715,6 @@ set(CPACK_RPM_USER_FILELIST
   "%ignore /opt"
   "%ignore /etc")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
-
-# CPack: DEB
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 
 # CPack: Windows System
 if(CPACK_GENERATOR MATCHES "NSIS")
