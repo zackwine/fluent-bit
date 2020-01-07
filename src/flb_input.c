@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -327,7 +327,9 @@ int flb_input_instance_init(struct flb_input_instance *in,
                             struct flb_config *config)
 {
     int ret;
+#ifdef FLB_HAVE_METRICS
     const char *name;
+#endif
     struct flb_input_plugin *p = in->p;
 
     /* Skip pseudo input plugins */
@@ -463,7 +465,7 @@ int flb_input_check(struct flb_config *config)
 /*
  * API for Input plugins
  * =====================
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  * The Input interface provides a certain number of functions that can be
  * used by Input plugins to configure it own behavior and request specific
  *
@@ -518,6 +520,11 @@ int flb_input_set_collector_time(struct flb_input_instance *in,
     struct flb_input_collector *collector;
 
     collector = flb_malloc(sizeof(struct flb_input_collector));
+    if (!collector) {
+        flb_errno();
+        return -1;
+    }
+
     collector->id          = collector_id(in);
     collector->type        = FLB_COLLECT_TIME;
     collector->cb_collect  = cb_collect;
@@ -543,6 +550,11 @@ int flb_input_set_collector_event(struct flb_input_instance *in,
     struct flb_input_collector *collector;
 
     collector = flb_malloc(sizeof(struct flb_input_collector));
+    if (!collector) {
+        flb_errno();
+        return -1;
+    }
+
     collector->id          = collector_id(in);
     collector->type        = FLB_COLLECT_FD_EVENT;
     collector->cb_collect  = cb_collect;
@@ -791,6 +803,11 @@ int flb_input_set_collector_socket(struct flb_input_instance *in,
     struct flb_input_collector *collector;
 
     collector = flb_malloc(sizeof(struct flb_input_collector));
+    if (!collector) {
+        flb_errno();
+        return -1;
+    }
+
     collector->type        = FLB_COLLECT_FD_SERVER;
     collector->cb_collect  = cb_new_connection;
     collector->fd_event    = fd;

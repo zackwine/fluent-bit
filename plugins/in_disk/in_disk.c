@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -260,6 +260,14 @@ static int configure(struct flb_in_disk_config *disk_config,
     disk_config->prev_read_total = (uint64_t*)flb_malloc(sizeof(uint64_t)*entry);
     disk_config->prev_write_total = (uint64_t*)flb_malloc(sizeof(uint64_t)*entry);
     disk_config->entry = entry;
+
+    if ( disk_config->read_total       == NULL ||
+         disk_config->write_total      == NULL ||
+         disk_config->prev_read_total  == NULL ||
+         disk_config->prev_write_total == NULL) {
+        flb_error("[in_disk] could not allocate memory");
+        return -1;
+    }
 
     /* initialize */
     for (i=0; i<entry; i++) {

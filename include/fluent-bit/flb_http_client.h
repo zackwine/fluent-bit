@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +38,7 @@
 /* HTTP Flags */
 #define FLB_HTTP_10          1
 #define FLB_HTTP_11          2
+#define FLB_HTTP_KA         16
 
 /* Proxy */
 #define FLB_HTTP_PROXY_NONE       0
@@ -54,6 +55,8 @@
 #define FLB_HTTP_HEADER_AUTH             "Authorization"
 #define FLB_HTTP_HEADER_CONTENT_TYPE     "Content-Type"
 #define FLB_HTTP_HEADER_CONTENT_ENCODING "Content-Encoding"
+#define FLB_HTTP_HEADER_CONNECTION       "Connection"
+#define FLB_HTTP_HEADER_KA               "keep-alive"
 
 struct flb_http_response {
     int status;                /* HTTP response status          */
@@ -94,8 +97,17 @@ struct flb_http_client {
     int header_size;
     char *header_buf;
 
+    /* incoming parameters */
+    const char *uri;
+    const char *query_string;
+    const char *host;
+    int port;
+
+    /* payload */
     int body_len;
     const char *body_buf;
+
+    struct mk_list headers;
 
     /* Proxy */
     struct flb_http_proxy proxy;

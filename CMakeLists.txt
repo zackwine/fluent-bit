@@ -3,7 +3,7 @@ project(fluent-bit)
 
 # Fluent Bit Version
 set(FLB_VERSION_MAJOR  1)
-set(FLB_VERSION_MINOR  3)
+set(FLB_VERSION_MINOR  4)
 set(FLB_VERSION_PATCH  0)
 set(FLB_VERSION_STR "${FLB_VERSION_MAJOR}.${FLB_VERSION_MINOR}.${FLB_VERSION_PATCH}")
 
@@ -34,7 +34,7 @@ include(ExternalProject)
 include(cmake/FindJournald.cmake)
 include(cmake/FindMonkey.cmake)
 include(cmake/macros.cmake)
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
 find_package(Sanitizers)
 
 # Output paths
@@ -50,6 +50,7 @@ option(FLB_SMALL              "Optimise for small size"       No)
 option(FLB_COVERAGE           "Build with code-coverage"      No)
 option(FLB_JEMALLOC           "Build with Jemalloc support"   No)
 option(FLB_REGEX              "Build with Regex support"     Yes)
+option(FLB_UTF8_ENCODER       "Build with UTF8 encoding support" Yes)
 option(FLB_PARSER             "Build with Parser support"    Yes)
 option(FLB_TLS                "Build with SSL/TLS support"    No)
 option(FLB_BINARY             "Build executable binary"      Yes)
@@ -67,6 +68,7 @@ option(FLB_HTTP_SERVER        "Enable HTTP Server"            No)
 option(FLB_BACKTRACE          "Enable stacktrace support"    Yes)
 option(FLB_LUAJIT             "Enable Lua Scripting support" Yes)
 option(FLB_RECORD_ACCESSOR    "Enable record accessor"       Yes)
+option(FLB_SIGNV4             "Enable AWS Signv4 support"    Yes)
 option(FLB_SYSTEM_STRPTIME    "Use strptime in system libc"  Yes)
 option(FLB_STATIC_CONF        "Build binary using static configuration")
 option(FLB_STREAM_PROCESSOR   "Enable Stream Processor"      Yes)
@@ -137,6 +139,7 @@ option(FLB_OUT_PLOT           "Enable Plot output plugin"           Yes)
 option(FLB_OUT_FILE           "Enable file output plugin"           Yes)
 option(FLB_OUT_TD             "Enable Treasure Data output plugin"  Yes)
 option(FLB_OUT_RETRY          "Enable Retry test output plugin"      No)
+option(FLB_OUT_SLACK          "Enable Slack output plugin"          Yes)
 option(FLB_OUT_SPLUNK         "Enable Splunk output plugin"         Yes)
 option(FLB_OUT_STACKDRIVER    "Enable Stackdriver output plugin"    Yes)
 option(FLB_OUT_STDOUT         "Enable STDOUT output plugin"         Yes)
@@ -310,6 +313,11 @@ add_subdirectory(${FLB_PATH_LIB_MPACK} EXCLUDE_FROM_ALL)
 # Miniz (zip)
 add_subdirectory(${FLB_PATH_LIB_MINIZ} EXCLUDE_FROM_ALL)
 
+# tutf8e
+if(FLB_UTF8_ENCODER)
+  add_subdirectory(${FLB_PATH_LIB_TUTF8E} EXCLUDE_FROM_ALL)
+endif()
+
 # Chunk I/O
 FLB_OPTION(CIO_LIB_STATIC  ON)
 FLB_OPTION(CIO_LIB_SHARED  OFF)
@@ -350,6 +358,11 @@ endif()
 # Metrics
 if(FLB_METRICS)
   FLB_DEFINITION(FLB_HAVE_METRICS)
+endif()
+
+# Signv4
+if (FLB_SIGNV4)
+  FLB_DEFINITION(FLB_HAVE_SIGNV4)
 endif()
 
 if(FLB_SQLDB)
@@ -523,7 +536,7 @@ if(FLB_JEMALLOC AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   # Link to Jemalloc as an external dependency
   ExternalProject_Add(jemalloc
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/jemalloc-5.2.1
-    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib/jemalloc-5.2.1/configure ${AUTOCONF_HOST_OPT} --with-lg-quantum=3 --enable-cc-silence --prefix=<INSTALL_DIR>
+    CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib/jemalloc-5.2.1/configure ${AUTOCONF_HOST_OPT} --with-lg-quantum=3 --prefix=<INSTALL_DIR>
     CFLAGS=-std=gnu99\ -Wall\ -pipe\ -g3\ -O3\ -funroll-loops
     BUILD_COMMAND $(MAKE)
     INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/
@@ -556,6 +569,12 @@ endif()
 if(FLB_REGEX)
   include(cmake/onigmo.cmake)
   FLB_DEFINITION(FLB_HAVE_REGEX)
+endif()
+
+# tutf8e (UTF8 Encoding)
+# =====================
+if(FLB_UTF8_ENCODER)
+  FLB_DEFINITION(FLB_HAVE_UTF8_ENCODER)
 endif()
 
 # LuaJIT (Scripting Support)
@@ -662,6 +681,7 @@ set(CPACK_PACKAGE_VENDOR "Treasure Data")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/td-agent-bit")
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/")
+
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
 
 if(FLB_SYSTEM_WINDOWS)
@@ -672,6 +692,25 @@ if(FLB_SYSTEM_WINDOWS)
   else()
     set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-win32")
   endif()
+endif()
+
+# Debian package setup and name sanitizer
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+find_program(DPKG_PROGRAM dpkg DOC "dpkg program of Debian-based systems")
+if(DPKG_PROGRAM)
+  execute_process(
+    COMMAND ${DPKG_PROGRAM} --print-architecture
+    OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  #set(CPACK_PACKAGE_FILE_NAME
+  #  "${CPACK_PACKAGE_NAME_LOWERCASE}_${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+
+  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+    ${CMAKE_CURRENT_SOURCE_DIR}/debian/conffiles
+    )
 endif()
 
 # RPM Generation information
@@ -695,6 +734,9 @@ set(CPACK_RPM_USER_FILELIST
   "%ignore /opt"
   "%ignore /etc")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+if(CPACK_GENERATOR MATCHES "RPM")
+  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
+endif()
 
 # CPack: DEB
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)

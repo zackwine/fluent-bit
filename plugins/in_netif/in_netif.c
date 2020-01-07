@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,12 @@ static int init_entry_linux(struct flb_in_netif_config *ctx)
 
     ctx->entry_len = sizeof(entry_name_linux) / sizeof(struct entry_define);
     ctx->entry = flb_malloc(sizeof(struct netif_entry) * ctx->entry_len);
-    for(i=0; i<ctx->entry_len; i++) {
+    if (!ctx->entry) {
+        flb_errno();
+        return -1;
+    }
+
+    for(i = 0; i < ctx->entry_len; i++) {
         ctx->entry[i].name     = entry_name_linux[i].name;
         ctx->entry[i].name_len = strlen(entry_name_linux[i].name);
         ctx->entry[i].prev     = 0;
@@ -139,9 +144,7 @@ static int configure(struct flb_in_netif_config *ctx,
 
     ctx->first_snapshot = FLB_TRUE;    /* assign first_snapshot with FLB_TRUE */
 
-    init_entry_linux(ctx);
-
-    return 0;
+    return init_entry_linux(ctx);
 }
 
 static inline int is_specific_interface(struct flb_in_netif_config *ctx,

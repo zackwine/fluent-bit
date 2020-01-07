@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +34,8 @@ struct flb_out_fcount_buffer {
     uint64_t bytes;
 };
 
-struct flb_out_fcount_config {
-    char*     unit;
+struct flb_flowcounter {
+    char     *unit;
     int32_t   tick;
     int       event_based;
 

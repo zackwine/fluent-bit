@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +18,14 @@
  *  limitations under the License.
  */
 
+#include <fluent-bit/flb_info.h>
 #include <fluent-bit/flb_output.h>
 #include <fluent-bit/flb_io.h>
 #include <fluent-bit/flb_log.h>
 #include <fluent-bit/flb_http_client.h>
 #include <fluent-bit/flb_pack.h>
 #include <fluent-bit/flb_time.h>
+#include <fluent-bit/flb_gzip.h>
 
 #include <msgpack.h>
 
@@ -49,9 +51,11 @@ static int cb_datadog_init(struct flb_output_instance *ins,
 
 static int64_t timestamp_format(const struct flb_time* tms) {
     int64_t timestamp = 0;
+
     /* Format the time, use milliseconds precision not nanoseconds */
     timestamp = tms->tm.tv_sec * 1000;
-    timestamp += tms->tm.tv_nsec/1000000;
+    timestamp += tms->tm.tv_nsec / 1000000;
+
     /* round up if necessary */
     if (tms->tm.tv_nsec % 1000000 >= 500000) {
         ++timestamp;
@@ -70,6 +74,7 @@ static void dd_msgpack_pack_key_value_str(msgpack_packer* mp_pck,
 }
 
 static int dd_compare_msgpack_obj_key_with_str(const msgpack_object obj, const char *key, size_t key_size) {
+
     if (obj.via.str.size == key_size && memcmp(obj.via.str.ptr,key, key_size) == 0) {
         return FLB_TRUE;
     }
@@ -82,9 +87,13 @@ static int datadog_format(const void *data, size_t bytes,
                           char **out_data, size_t *out_size,
                           struct flb_out_datadog *ctx)
 {
+    int i;
+    int ind;
+    int byte_cnt;
+    int remap_cnt;
     /* for msgpack global structs */
-    size_t off = 0;
     int array_size = 0;
+    size_t off = 0;
     msgpack_unpacked result;
     msgpack_sbuffer mp_sbuf;
     msgpack_packer mp_pck;
@@ -127,36 +136,45 @@ static int datadog_format(const void *data, size_t bytes,
         map = root.via.array.ptr[1];
         map_size = map.via.map.size;
 
-        /* msgpack requires knowing/allocating exact map size in advance, so we need to
-           loop through the map twice. First time here to count how many attr we can
-           remap to tags, and second time later where we actually perform the remapping.*/
-        int remap_cnt = 0, byte_cnt = ctx->dd_tags ? flb_sds_len(ctx->dd_tags) : 0;
+        /*
+         * msgpack requires knowing/allocating exact map size in advance, so we need to
+         * loop through the map twice. First time here to count how many attr we can
+         * remap to tags, and second time later where we actually perform the remapping.
+         */
+        remap_cnt = 0, byte_cnt = ctx->dd_tags ? flb_sds_len(ctx->dd_tags) : 0;
         if (ctx->remap) {
-            for (int i = 0; i < map_size; i++) {
+            for (i = 0; i < map_size; i++) {
                 if (dd_attr_need_remapping(map.via.map.ptr[i].key, map.via.map.ptr[i].val) >= 0) {
                     remap_cnt++;
-                    /* here we also *estimated* the size of buffer needed to hold the
-                       remapped tags. We can't know the size for sure until we do the remapping,
-                       the estimation here is just for efficiency, so that appending tags won't
-                       cause repeated resizing/copying */
+                    /*
+                     * here we also *estimated* the size of buffer needed to hold the
+                     * remapped tags. We can't know the size for sure until we do the remapping,
+                     * the estimation here is just for efficiency, so that appending tags won't
+                     * cause repeated resizing/copying
+                     */
                     byte_cnt += 2 * (map.via.map.ptr[i].key.via.str.size + map.via.map.ptr[i].val.via.str.size);
                 }
             }
             if (!remapped_tags) {
                 remapped_tags = flb_sds_create_size(byte_cnt);
             }
-            /* we reuse this buffer across messages, which means we have to clear it for each message
-               flb_sds doesn't have a clear function, so we copy a empty string to achieve the same effect */
+            /*
+             * we reuse this buffer across messages, which means we have to clear it for each message
+             * flb_sds doesn't have a clear function, so we copy a empty string to achieve the same effect
+             */
             remapped_tags = flb_sds_copy(remapped_tags, "", 0);
         }
 
-        /* build new object(map) with additional space for datadog entries
-           for those remapped attributes, we need to remove them from the map. Note: If there were
-           no dd_tags specified AND there will be remapped attributes, we need to add 1 to account
-           for the new presense of the dd_tags */
+        /*
+         * build new object(map) with additional space for datadog entries
+         * for those remapped attributes, we need to remove them from the map. Note: If there were
+         * no dd_tags specified AND there will be remapped attributes, we need to add 1 to account
+         * for the new presense of the dd_tags
+         */
         if (remap_cnt && (ctx->dd_tags == NULL)) {
             msgpack_pack_map(&mp_pck, ctx->nb_additional_entries + map_size + 1 - remap_cnt);
-        } else {
+        }
+        else {
             msgpack_pack_map(&mp_pck, ctx->nb_additional_entries + map_size - remap_cnt);
         }
 
@@ -189,13 +207,15 @@ static int datadog_format(const void *data, size_t bytes,
         }
 
         /* Append initial object k/v */
-        int i = 0, ind = 0;
+        ind = 0;
         for (i = 0; i < map_size; i++) {
             k = map.via.map.ptr[i].key;
             v = map.via.map.ptr[i].val;
 
-            /* actually perform the remapping here. For matched attr, we remap and append them to
-               remapped_tags buffer, then skip the rest of processing (so they won't be packed as attr) */
+            /*
+             * actually perform the remapping here. For matched attr, we remap and append them to
+             * remapped_tags buffer, then skip the rest of processing (so they won't be packed as attr)
+             */
             if (ctx->remap && (ind = dd_attr_need_remapping(k, v)) >=0 ) {
                 remapping[ind].remap_to_tag(remapping[ind].remap_tag_name, v, remapped_tags);
                 continue;
@@ -205,7 +225,8 @@ static int datadog_format(const void *data, size_t bytes,
             if (ctx->dd_message_key != NULL && dd_compare_msgpack_obj_key_with_str(k, ctx->dd_message_key, flb_sds_len(ctx->dd_message_key)) == FLB_TRUE) {
                 msgpack_pack_str(&mp_pck, sizeof(FLB_DATADOG_DD_MESSAGE_KEY)-1);
                 msgpack_pack_str_body(&mp_pck, FLB_DATADOG_DD_MESSAGE_KEY, sizeof(FLB_DATADOG_DD_MESSAGE_KEY)-1);
-            } else {
+            }
+            else {
                 msgpack_pack_object(&mp_pck, k);
             }
 
@@ -241,6 +262,7 @@ static int datadog_format(const void *data, size_t bytes,
 
     *out_data = out_buf;
     *out_size = flb_sds_len(out_buf);
+
     /* Cleanup */
     msgpack_unpacked_destroy(&result);
     if (!remapped_tags) {
@@ -262,8 +284,11 @@ static void cb_datadog_flush(const void *data, size_t bytes,
 
     flb_sds_t payload_buf;
     size_t payload_size = 0;
+    void *final_payload_buf = NULL;
+    size_t final_payload_size = 0;
     size_t b_sent;
     int ret = FLB_ERROR;
+    int compressed = FLB_FALSE;
 
     /* Get upstream connection */
     upstream_conn = flb_upstream_conn_get(ctx->upstream);
@@ -278,9 +303,23 @@ static void cb_datadog_flush(const void *data, size_t bytes,
         FLB_OUTPUT_RETURN(FLB_ERROR);
     }
 
+    /* Should we compress the payload ? */
+    if (ctx->compress_gzip == FLB_TRUE) {
+        ret = flb_gzip_compress((void *) payload_buf, payload_size,
+                                &final_payload_buf, &final_payload_size);
+        if (ret == -1) {
+            flb_error("[out_http] cannot gzip payload, disabling compression");
+        } else {
+            compressed = FLB_TRUE;
+        }
+    } else {
+        final_payload_buf = payload_buf;
+        final_payload_size = payload_size;
+    }
+
     /* Create HTTP client context */
     client = flb_http_client(upstream_conn, FLB_HTTP_POST, ctx->uri,
-                             payload_buf, payload_size,
+                             final_payload_buf, final_payload_size,
                              ctx->host, ctx->port,
                              NULL, 0);
     if (!client) {
@@ -292,6 +331,11 @@ static void cb_datadog_flush(const void *data, size_t bytes,
     flb_http_add_header(client,
                         FLB_DATADOG_CONTENT_TYPE, sizeof(FLB_DATADOG_CONTENT_TYPE) - 1,
                         FLB_DATADOG_MIME_JSON, sizeof(FLB_DATADOG_MIME_JSON) - 1);
+
+    /* Content Encoding: gzip */
+    if (compressed == FLB_TRUE) {
+        flb_http_set_content_encoding_gzip(client);
+    }
     /* TODO: Append other headers if needed*/
 
     /* finaly send the query */
@@ -322,6 +366,13 @@ static void cb_datadog_flush(const void *data, size_t bytes,
         ret = FLB_RETRY;
     }
 
+    /*
+     * If the final_payload_buf buffer is different than payload_buf, means
+     * we generated a different payload and must be freed.
+     */
+    if (final_payload_buf != payload_buf) {
+        flb_free(final_payload_buf);
+    }
     /* Destroy HTTP client context */
     flb_sds_destroy(payload_buf);
     flb_http_client_destroy(client);
@@ -334,6 +385,10 @@ static void cb_datadog_flush(const void *data, size_t bytes,
 static int cb_datadog_exit(void *data, struct flb_config *config)
 {
     struct flb_out_datadog *ctx = data;
+
+    if (!ctx) {
+        return 0;
+    }
 
     flb_datadog_conf_destroy(ctx);
     return 0;

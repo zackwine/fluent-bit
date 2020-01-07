@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -188,6 +188,13 @@ void cb_nats_flush(const void *data, size_t bytes,
 
     /* Compose the NATS Publish request */
     request = flb_malloc(json_len + tag_len + 32);
+    if (!request) {
+        flb_errno();
+        flb_sds_destroy(json_msg);
+        flb_upstream_conn_release(u_conn);
+        FLB_OUTPUT_RETURN(FLB_RETRY);
+    }
+
     req_len = snprintf(request, tag_len + 32, "PUB %s %zu\r\n",
                        tag, json_len);
 

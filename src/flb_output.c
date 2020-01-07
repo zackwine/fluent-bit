@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,13 @@
 #include <fluent-bit/flb_macros.h>
 #include <fluent-bit/flb_utils.h>
 #include <fluent-bit/flb_plugin_proxy.h>
+
+FLB_TLS_DEFINE(struct flb_libco_out_params, flb_libco_params);
+
+void flb_output_prepare()
+{
+    FLB_TLS_INIT(flb_libco_params);
+}
 
 /* Validate the the output address protocol */
 static int check_protocol(const char *prot, const char *output)
@@ -140,6 +147,11 @@ int flb_output_instance_destroy(struct flb_output_instance *ins)
     }
 #endif
 
+    /* destroy config map */
+    if (ins->config_map) {
+        flb_config_map_destroy(ins->config_map);
+    }
+
     /* release properties */
     flb_output_free_properties(ins);
 
@@ -156,6 +168,7 @@ void flb_output_exit(struct flb_config *config)
     struct mk_list *head;
     struct flb_output_instance *ins;
     struct flb_output_plugin *p;
+    void *params;
 
     mk_list_foreach_safe(head, tmp, &config->outputs) {
         ins = mk_list_entry(head, struct flb_output_instance, _head);
@@ -172,6 +185,11 @@ void flb_output_exit(struct flb_config *config)
 
         flb_output_instance_destroy(ins);
     }
+
+    params = FLB_TLS_GET(flb_libco_params);
+    if (params) {
+        flb_free(params);
+    }
 }
 
 static inline int instance_id(struct flb_config *config)
@@ -182,7 +200,7 @@ static inline int instance_id(struct flb_config *config)
         return 0;
     }
 
-    entry = mk_list_entry_last(&config->filters, struct flb_output_instance,
+    entry = mk_list_entry_last(&config->outputs, struct flb_output_instance,
                                _head);
     return (entry->id + 1);
 }
@@ -303,6 +321,10 @@ struct flb_output_instance *flb_output_new(struct flb_config *config,
         instance->flags |= FLB_IO_TLS;
     }
 
+    /* Keepalive */
+    instance->keepalive = FLB_FALSE;
+    instance->keepalive_timeout = FLB_OUTPUT_KA_TIMEOUT;
+
 #ifdef FLB_HAVE_TLS
     instance->tls.context    = NULL;
     instance->tls_debug      = -1;
@@ -381,6 +403,24 @@ int flb_output_set_property(struct flb_output_instance *out,
         }
         else {
             out->host.port = 0;
+        }
+    }
+    else if (prop_key_check("keepalive", k, len) == 0){
+        if (tmp) {
+            out->keepalive = flb_utils_bool(tmp);
+            flb_sds_destroy(tmp);
+        }
+        else {
+            out->keepalive = FLB_FALSE;
+        }
+    }
+    else if (prop_key_check("keepalive_timeout", k, len) == 0){
+        if (tmp) {
+            out->keepalive_timeout = atoi(tmp);
+            flb_sds_destroy(tmp);
+        }
+        else {
+            out->keepalive_timeout = 10;
         }
     }
     else if (prop_key_check("ipv6", k, len) == 0 && tmp) {
@@ -501,16 +541,14 @@ const char *flb_output_get_property(const char *key, struct flb_output_instance 
 int flb_output_init(struct flb_config *config)
 {
     int ret;
+#ifdef FLB_HAVE_METRICS
     const char *name;
+#endif
     struct mk_list *tmp;
     struct mk_list *head;
+    struct mk_list *config_map;
     struct flb_output_instance *ins;
     struct flb_output_plugin *p;
-
-    /* We need at least one output */
-    if (mk_list_is_empty(&config->outputs) == 0) {
-        return -1;
-    }
 
     /* Retrieve the plugin reference */
     mk_list_foreach_safe(head, tmp, &config->outputs) {
@@ -566,6 +604,33 @@ int flb_output_init(struct flb_config *config)
             }
         }
 #endif
+        /*
+         * Before to call the initialization callback, make sure that the received
+         * configuration parameters are valid if the plugin is registering a config map.
+         */
+        if (p->config_map) {
+            /*
+             * Create a dynamic version of the configmap that will be used by the specific
+             * instance in question.
+             */
+            config_map = flb_config_map_create(p->config_map);
+            if (!config_map) {
+                flb_error("[output] error loading config map for '%s' plugin",
+                          p->name);
+                return -1;
+            }
+            ins->config_map = config_map;
+
+            /* Validate incoming properties against config map */
+            ret = flb_config_map_properties_check(ins->p->name,
+                                                  &ins->properties, ins->config_map);
+            if (ret == -1) {
+                flb_output_instance_destroy(ins);
+                return -1;
+            }
+        }
+
+        /* Initialize plugin through it 'init callback' */
         ret = p->cb_init(ins, config, ins->data);
         mk_list_init(&ins->th_queue);
         if (ret == -1) {
@@ -590,5 +655,49 @@ int flb_output_check(struct flb_config *config)
     if (mk_list_is_empty(&config->outputs) == 0) {
         return -1;
     }
+    return 0;
+}
+
+/*
+ * Output plugins might have enabled certain features that have not been passed
+ * directly to the upstream context. In order to avoid let plugins validate specific
+ * variables from the instance context like tls, tls.x, keepalive, etc, we populate
+ * them directly through this function.
+ */
+int flb_output_upstream_set(struct flb_upstream *u, struct flb_output_instance *ins)
+{
+    int flags = 0;
+
+    if (!u) {
+        return -1;
+    }
+
+    /* TLS */
+#ifdef FLB_HAVE_TLS
+    if (ins->use_tls == FLB_TRUE) {
+        flags |= FLB_IO_TLS;
+    }
+    else {
+        flags |= FLB_IO_TCP;
+    }
+#else
+    flags |= FLB_IO_TCP;
+#endif
+
+    /* IPv6 */
+    if (ins->host.ipv6 == FLB_TRUE) {
+        flags |= FLB_IO_IPV6;
+    }
+
+    /* KeepAlive */
+    if (ins->keepalive == FLB_TRUE) {
+        flags |= FLB_IO_TCP_KA;
+
+        /* Keepalive timeout */
+        u->ka_timeout = ins->keepalive_timeout;
+    }
+
+    /* Set flags */
+    u->flags |= flags;
     return 0;
 }

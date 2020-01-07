@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -285,6 +285,13 @@ struct mk_list *flb_utils_split(const char *line, int separator, int max_split)
     return list;
 }
 
+void flb_utils_split_free_entry(struct flb_split_entry *entry)
+{
+    mk_list_del(&entry->_head);
+    flb_free(entry->value);
+    flb_free(entry);
+}
+
 void flb_utils_split_free(struct mk_list *list)
 {
     struct mk_list *tmp;
@@ -293,9 +300,7 @@ void flb_utils_split_free(struct mk_list *list)
 
     mk_list_foreach_safe(head, tmp, list) {
         entry = mk_list_entry(head, struct flb_split_entry, _head);
-        mk_list_del(&entry->_head);
-        flb_free(entry->value);
-        flb_free(entry);
+        flb_utils_split_free_entry(entry);
     }
 
     flb_free(list);
@@ -432,8 +437,13 @@ int flb_utils_bool(const char *val)
         strcasecmp(val, "yes") == 0) {
         return FLB_TRUE;
     }
+    else if (strcasecmp(val, "false") == 0 ||
+             strcasecmp(val, "off") == 0 ||
+             strcasecmp(val, "no") == 0) {
+        return FLB_FALSE;
+    }
 
-    return FLB_FALSE;
+    return -1;
 }
 
 /* Convert a 'string' time seconds.nanoseconds to int and long values */
@@ -585,8 +595,11 @@ int flb_utils_write_str(char *buf, int *off, size_t size,
         }
         else if (c >= 0x80 && c <= 0xFFFF) {
             hex_bytes = flb_utf8_len(str + i);
-            if ((available - written) < (2 + hex_bytes)) {
+            if (available - written < 6) {
                 return FLB_FALSE;
+            }
+            if (i + hex_bytes > str_len) {
+                break; /* skip truncated UTF-8 */
             }
 
             state = FLB_UTF8_ACCEPT;
@@ -612,8 +625,11 @@ int flb_utils_write_str(char *buf, int *off, size_t size,
         }
         else if (c > 0xFFFF) {
             hex_bytes = flb_utf8_len(str + i);
-            if ((available - written) < (4 + hex_bytes)) {
+            if (available - written < 6) {
                 return FLB_FALSE;
+            }
+            if (i + hex_bytes > str_len) {
+                break; /* skip truncated UTF-8 */
             }
 
             state = FLB_UTF8_ACCEPT;

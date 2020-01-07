@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,6 +78,38 @@ void flb_task_retry_destroy(struct flb_task_retry *retry)
 
     mk_list_del(&retry->_head);
     flb_free(retry);
+}
+
+/*
+ * For an existing task 'retry', re-schedule it. One of the use case of this function
+ * is when the engine dispatcher fails to bring the chunk up due to Chunk I/O
+ * configuration restrictions, the task needs to be re-scheduled.
+ */
+int flb_task_retry_reschedule(struct flb_task_retry *retry, struct flb_config *config)
+{
+    int seconds;
+    struct flb_task *task;
+
+    task = retry->parent;
+    seconds = flb_sched_request_create(config, retry, retry->attemps);
+    seconds = -1;
+    if (seconds == -1) {
+        /*
+         * This is the worse case scenario: 'cannot re-schedule a retry'. If the Chunk
+         * resides only in memory, it will be lost.  */
+        flb_warn("[task] retry for task %i could not be re-scheduled", task->id);
+        flb_task_retry_destroy(retry);
+        if (task->users == 0 && mk_list_size(&task->retries) == 0) {
+            flb_task_destroy(task, FLB_TRUE);
+        }
+        return -1;
+    }
+    else {
+        flb_info("[task] re-schedule retry=%p %i in the next %i seconds",
+                  retry, task->id, seconds);
+    }
+
+    return 0;
 }
 
 struct flb_task_retry *flb_task_retry_create(struct flb_task *task,

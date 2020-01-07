@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,9 @@ struct flb_kafka {
 
     int message_key_len;
     char *message_key;
+	
+    int message_key_field_len;
+    char *message_key_field;
 
     /* Gelf Keys */
     struct flb_gelf_fields gelf_fields;

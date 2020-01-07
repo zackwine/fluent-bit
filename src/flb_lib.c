@@ -2,7 +2,7 @@
 
 /*  Fluent Bit Demo
  *  ===============
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -100,6 +100,12 @@ static inline struct flb_filter_instance *filter_instance_get(flb_ctx_t *ctx,
     }
 
     return NULL;
+}
+
+void flb_init_env()
+{
+    flb_thread_prepare();
+    flb_output_prepare();
 }
 
 flb_ctx_t *flb_create()
@@ -255,6 +261,7 @@ int flb_input_set(flb_ctx_t *ctx, int ffd, ...)
         value = va_arg(va, char *);
         if (!value) {
             /* Wrong parameter */
+            va_end(va);
             return -1;
         }
         ret = flb_input_set_property(i_ins, key, value);
@@ -279,7 +286,6 @@ int flb_output_set(flb_ctx_t *ctx, int ffd, ...)
 
     o_ins = out_instance_get(ctx, ffd);
     if (!o_ins) {
-        printf("no instance ofund!\n");
         return -1;
     }
 
@@ -288,6 +294,7 @@ int flb_output_set(flb_ctx_t *ctx, int ffd, ...)
         value = va_arg(va, char *);
         if (!value) {
             /* Wrong parameter */
+            va_end(va);
             return -1;
         }
 
@@ -321,6 +328,7 @@ int flb_filter_set(flb_ctx_t *ctx, int ffd, ...)
         value = va_arg(va, char *);
         if (!value) {
             /* Wrong parameter */
+            va_end(va);
             return -1;
         }
 

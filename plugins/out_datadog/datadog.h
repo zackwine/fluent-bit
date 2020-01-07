@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,6 +61,9 @@ struct flb_out_datadog {
     flb_sds_t dd_service;
     flb_sds_t dd_tags;
     flb_sds_t dd_message_key;
+
+    /* Compression mode (gzip) */
+    int compress_gzip;
 
     /* Upstream connection to the backend server */
     struct flb_upstream *upstream;

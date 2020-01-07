@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -145,7 +145,10 @@ static void flb_help(int rc, struct flb_config *config)
 #ifdef FLB_HAVE_STREAM_PROCESSOR
     printf("  -T, --sp-task=SQL\tdefine a stream processor task\n");
 #endif
-    printf("  -v, --verbose\t\tenable verbose mode\n");
+    printf("  -v, --verbose\t\tincrease logging verbosity (default: info)\n");
+#ifdef FLB_HAVE_TRACE
+    printf("  -vv\t\t\ttrace mode (available)\n");
+#endif
 #ifdef FLB_HAVE_HTTP_SERVER
     printf("  -H, --http\t\tenable monitoring HTTP server\n");
     printf("  -P, --port\t\tset HTTP server TCP port (default: %s)\n",
@@ -849,6 +852,10 @@ int main(int argc, char **argv)
         flb_utils_set_daemon(config);
     }
 #endif
+
+    /* Prepare pthread keys */
+    flb_thread_prepare();
+    flb_output_prepare();
 
     ret = flb_engine_start(config);
     if (ret == -1) {

@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,6 +96,9 @@ static ssize_t parse_payload_json(struct tcp_conn *conn)
         flb_warn("[in_tcp] invalid JSON message, skipping");
         conn->buf_len = 0;
         conn->pack_state.multiple = FLB_TRUE;
+        return -1;
+    }
+    else if (ret == -1) {
         return -1;
     }
 
@@ -215,6 +218,7 @@ int tcp_conn_event(void *data)
                       conn->buf_data[0]);
             consume_bytes(conn->buf_data, 1, conn->buf_len);
             conn->buf_len--;
+            conn->buf_data[conn->buf_len] = '\0';
         }
 
         /* JSON Format handler */
@@ -233,9 +237,12 @@ int tcp_conn_event(void *data)
         }
         else if (ctx->format == FLB_TCP_FMT_NONE) {
             ret_payload = parse_payload_none(conn);
-            if (ret_payload <= 0) {
+            if (ret_payload == 0) {
+                return -1;
+            }
+            else if (ret_payload == -1) {
                 conn->buf_len = 0;
-                return (int) ret_payload;
+                return -1;
             }
         }
 

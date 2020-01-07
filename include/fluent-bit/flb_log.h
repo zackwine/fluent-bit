@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,11 @@ struct flb_log {
     pthread_t tid;             /* thread ID   */
     struct flb_worker *worker; /* non-real worker reference */
     struct mk_event_loop *evl;
+
+    /* Initialization variables */
+    int pth_init;
+    pthread_cond_t  pth_cond;
+    pthread_mutex_t pth_mutex;
 };
 
 static inline int flb_log_check(int l) {

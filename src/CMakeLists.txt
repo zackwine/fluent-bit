@@ -22,6 +22,7 @@ set(src
   flb_filter.c
   flb_output.c
   flb_config.c
+  flb_config_map.c
   flb_network.c
   flb_utils.c
   flb_slist.c
@@ -92,6 +93,13 @@ if(FLB_METRICS)
     ${src}
     "flb_metrics.c"
     "flb_metrics_exporter.c"
+    )
+endif()
+
+if(FLB_METRICS)
+  set(src
+    ${src}
+    "flb_signv4.c"
     )
 endif()
 
@@ -233,6 +241,14 @@ set(FLB_DEPS
   ${FLB_PROXY_PLUGINS}
   ${extra_libs}
   )
+
+# UTF8 Encoding
+if(FLB_UTF8_ENCODER)
+set(FLB_DEPS
+  ${FLB_DEPS}
+  tutf8e
+  )
+endif()
 
 # Record Accessor
 if(FLB_RECORD_ACCESSOR)

@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,6 +108,7 @@ void flb_task_destroy(struct flb_task *task, int del);
 struct flb_task_retry *flb_task_retry_create(struct flb_task *task,
                                              void *data);
 void flb_task_retry_destroy(struct flb_task_retry *retry);
+int flb_task_retry_reschedule(struct flb_task_retry *retry, struct flb_config *config);
 int flb_task_retry_clean(struct flb_task *task, void *data);
 
 

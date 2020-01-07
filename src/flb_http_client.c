@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,12 +28,14 @@
  * - Use upstream connections.
  * - Support 'retry' in case the HTTP server timeouts a connection.
  * - Get return Status, Headers and Body content if found.
+ * - If Upstream supports keepalive, adjust headers
  */
 
 #define _GNU_SOURCE
 #include <string.h>
 
 #include <fluent-bit/flb_info.h>
+#include <fluent-bit/flb_kv.h>
 #include <fluent-bit/flb_mem.h>
 #include <fluent-bit/flb_http_client.h>
 
@@ -435,12 +437,15 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
                                         const char *proxy, int flags)
 {
     int ret;
+    char *p;
     char *buf = NULL;
     char *str_method = NULL;
     char *fmt_plain =                           \
         "%s %s HTTP/1.%i\r\n"
         "Host: %s:%i\r\n"
         "Content-Length: %i\r\n";
+    char *fmt_vanilla =                         \
+        "%s %s HTTP/1.%i\r\n";
     char *fmt_proxy =                           \
         "%s http://%s:%i/%s HTTP/1.%i\r\n"
         "Host: %s:%i\r\n"
@@ -472,7 +477,7 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
     }
 
     /* FIXME: handler for HTTPS proxy */
-    if (!proxy) {
+    if (!proxy && host && port) {
         ret = snprintf(buf, FLB_HTTP_BUF_SIZE,
                        fmt_plain,
                        str_method,
@@ -482,7 +487,7 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
                        u->tcp_port,
                        body_len);
     }
-    else {
+    else if (host && port > 0) {
         ret = snprintf(buf, FLB_HTTP_BUF_SIZE,
                        fmt_proxy,
                        str_method,
@@ -493,6 +498,13 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
                        host,
                        port,
                        body_len);
+    }
+    else {
+        ret = snprintf(buf, FLB_HTTP_BUF_SIZE,
+                       fmt_vanilla,
+                       str_method,
+                       uri,
+                       flags & FLB_HTTP_10 ? 0 : 1);
     }
 
     if (ret == -1) {
@@ -509,10 +521,26 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
 
     c->u_conn      = u_conn;
     c->method      = method;
+    c->uri         = uri;
+    c->host        = host;
+    c->port        = port;
     c->header_buf  = buf;
     c->header_size = FLB_HTTP_BUF_SIZE;
     c->header_len  = ret;
     c->flags       = flags;
+    mk_list_init(&c->headers);
+
+    /* Check if we have a query string */
+    p = strchr(uri, '?');
+    if (p) {
+        p++;
+        c->query_string = p;
+    }
+
+    /* Is Upstream connection using keepalive mode ? */
+    if (u_conn->u->flags & FLB_IO_TCP_KA) {
+        c->flags |= FLB_HTTP_KA;
+    }
 
     /* Response */
     c->resp.content_length = -1;
@@ -565,9 +593,9 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
 int flb_http_buffer_size(struct flb_http_client *c, size_t size)
 {
     if (size < c->resp.data_size_max && size != 0) {
-        flb_error("[http] requested buffer size %lu cannot exceed"
-                  "maximum size %lu",
-                  c->resp.data_size, c->resp.data_size_max);
+        flb_error("[http] requested buffer size %lu (bytes) needs to be greater than "
+                  "minimum size allowed %lu (bytes)",
+                  size, c->resp.data_size_max);
         return -1;
     }
 
@@ -651,18 +679,42 @@ int flb_http_buffer_increase(struct flb_http_client *c, size_t size,
     return 0;
 }
 
+
 /* Append a custom HTTP header to the request */
 int flb_http_add_header(struct flb_http_client *c,
                         const char *key, size_t key_len,
                         const char *val, size_t val_len)
 {
-    int required;
-    int new_size;
-    char *tmp;
+    struct flb_kv *kv;
 
     if (key_len < 1 || val_len < 1) {
         return -1;
     }
+
+    /* register new header in the temporal kv list */
+    kv = flb_kv_item_create_len(&c->headers,
+                                (char *) key, key_len, (char *) val, val_len);
+    if (!kv) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int http_header_push(struct flb_http_client *c, struct flb_kv *header)
+{
+    char *tmp;
+    const char *key;
+    const char *val;
+    size_t key_len;
+    size_t val_len;
+    size_t required;
+    size_t new_size;
+
+    key = header->key;
+    key_len = flb_sds_len(header->key);
+    val = header->val;
+    val_len = flb_sds_len(header->val);
 
     /*
      * The new header will need enough space in the buffer:
@@ -709,6 +761,45 @@ int flb_http_add_header(struct flb_http_client *c,
     c->header_buf[c->header_len++] = '\n';
 
     return 0;
+}
+
+
+static int http_headers_compose(struct flb_http_client *c)
+{
+    int ret;
+    struct mk_list *head;
+    struct flb_kv *header;
+
+    mk_list_foreach(head, &c->headers) {
+        header = mk_list_entry(head, struct flb_kv, _head);
+        ret = http_header_push(c, header);
+        if (ret != 0) {
+            flb_error("[http_client] cannot compose request headers");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static void http_headers_destroy(struct flb_http_client *c)
+{
+    flb_kv_release(&c->headers);
+}
+
+static int flb_http_keepalive(struct flb_http_client *c)
+{
+    /* validate keepalive mode */
+    if ((c->flags & FLB_HTTP_KA) == 0) {
+        return -1;
+    }
+
+    /* append header */
+    return flb_http_add_header(c,
+                               FLB_HTTP_HEADER_CONNECTION,
+                               sizeof(FLB_HTTP_HEADER_CONNECTION) - 1,
+                               FLB_HTTP_HEADER_KA,
+                               sizeof(FLB_HTTP_HEADER_KA) - 1);
 }
 
 /* Adds a header specifying that the payload is compressed with gzip */
@@ -787,6 +878,15 @@ int flb_http_do(struct flb_http_client *c, size_t *bytes)
     size_t bytes_header = 0;
     size_t bytes_body = 0;
     char *tmp;
+
+    /* Append pending headers */
+    ret = http_headers_compose(c);
+    if (ret == -1) {
+        return -1;
+    }
+
+    /* Try to add keep alive header */
+    flb_http_keepalive(c);
 
     /* check enough space for the ending CRLF */
     if (header_available(c, crlf) != 0) {
@@ -883,6 +983,7 @@ int flb_http_do(struct flb_http_client *c, size_t *bytes)
 
 void flb_http_client_destroy(struct flb_http_client *c)
 {
+    http_headers_destroy(c);
     flb_free(c->resp.data);
     flb_free(c->header_buf);
     flb_free(c);

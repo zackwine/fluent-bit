@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +89,11 @@ static char *expand_tilde(const char *path)
 
         if (p) {
             tmp = flb_malloc(PATH_MAX);
-            snprintf(tmp, PATH_MAX -1, "%s%s", dir, p);
+            if (!tmp) {
+                flb_errno();
+                return NULL;
+            }
+            snprintf(tmp, PATH_MAX - 1, "%s%s", dir, p);
         }
         else {
             dir = getenv("HOME");
@@ -148,8 +152,10 @@ static inline int do_glob(const char *pattern, int flags,
     /* invoke glob with new parameters */
     ret = glob(pattern, new_flags, NULL, pglob);
 
-    /* remove temporary buffer */
-    if (tmp != NULL) {
+    /* remove temporary buffer, if allocated by expand_tilde above.
+     * Note that this buffer is only used for libc implementations
+     * that do not support the GLOB_TILDE flag, like musl. */
+    if (tmp != NULL && tmp != pattern) {
         flb_free(tmp);
     }
 

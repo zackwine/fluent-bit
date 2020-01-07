@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -152,6 +152,16 @@ struct flb_out_datadog *flb_datadog_conf_create(struct flb_output_instance *ins,
     ctx->nb_additional_entries++;
     flb_debug("[out_datadog] ctx->json_date_key: %s", ctx->json_date_key);
 
+    /* Compress (gzip) */
+    tmp = flb_output_get_property("compress", ins);
+    ctx->compress_gzip = FLB_FALSE;
+    if (tmp) {
+        if (strcasecmp(tmp, "gzip") == 0) {
+            ctx->compress_gzip = FLB_TRUE;
+        }
+    }
+    flb_debug("[out_datadog] ctx->compress_gzip: %i", ctx->compress_gzip);
+   
     /* Prepare an upstream handler */
     upstream = flb_upstream_create(config, ctx->host, ctx->port, io_flags, &ins->tls);
     if (!upstream) {

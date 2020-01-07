@@ -2,7 +2,7 @@
 
 /*  Fluent Bit
  *  ==========
- *  Copyright (C) 2019      The Fluent Bit Authors
+ *  Copyright (C) 2019-2020 The Fluent Bit Authors
  *  Copyright (C) 2015-2018 Treasure Data Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,10 @@ struct flb_slist_entry {
 
 int flb_slist_create(struct mk_list *list);
 int flb_slist_add(struct mk_list *head, const char *str);
+int flb_slist_add_n(struct mk_list *head, const char *str, int len);
 void flb_slist_destroy(struct mk_list *list);
+int flb_slist_split_string(struct mk_list *list, const char *str,
+                           int separator, int max_split);
+void flb_slist_dump(struct mk_list *list);
 
 #endif
