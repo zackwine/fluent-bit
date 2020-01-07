@@ -419,9 +419,9 @@ static char *elasticsearch_format(const void *data, size_t bytes,
     return buf;
 }
 
-static int cb_es_init(struct flb_output_instance *ins,
-                      struct flb_config *config,
-                      void *data)
+int cb_es_init(struct flb_output_instance *ins,
+               struct flb_config *config,
+               void *data)
 {
     struct flb_elasticsearch *ctx;
 

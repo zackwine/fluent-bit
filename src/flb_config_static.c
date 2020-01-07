@@ -111,12 +111,13 @@ struct mk_rconf_section *rconf_section_add(struct mk_rconf *conf,
  * Helper function to simulate a fgets(2) but instead of using
  * a real file stream uses the data buffer provided.
  */
-static int static_fgets(char *out, size_t size, const char *data, size_t *off)
+static int static_fgets(char *out, size_t size, char *data, size_t *off)
 {
     size_t len;
-    const char *start = data + *off;
+    char *start;
     char *end;
 
+    start = data + *off;
     end = strchr(start, '\n');
 
     if (!end || *off >= size) {
@@ -355,7 +356,7 @@ static int flb_config_static_read(struct mk_rconf *conf,
  *   include/fluent-bit/conf/flb_static_conf.h
  *
  */
-struct mk_rconf *flb_config_static_open(const char *file)
+struct mk_rconf *flb_config_static_open(char *file)
 {
     int i;
     int ret;
@@ -365,8 +366,8 @@ struct mk_rconf *flb_config_static_open(const char *file)
 
     /* Iterate static array and lookup the file name */
     for (i = 0; i < flb_config_files_size; i++) {
-        k = (const char *) flb_config_files[i][0];
-        v = (const char *) flb_config_files[i][1];
+        k = flb_config_files[i][0];
+        v = flb_config_files[i][1];
 
         if (strcmp(k, file) == 0) {
             break;

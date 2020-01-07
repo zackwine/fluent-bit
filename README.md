@@ -84,65 +84,65 @@ Fluent Bit is fully supported on Windows environments, get started with the foll
 
 | name | title | description |
 | :--- | :--- | :--- |
-| [collectd](https://docs.fluentbit.io/manual/input/collectd) | Collectd | Listen for UDP packets from Collectd. |
-| [cpu](https://docs.fluentbit.io/manual/input/cpu) | CPU Usage | measure total CPU usage of the system. |
-| [disk](https://docs.fluentbit.io/manual/input/disk) | Disk Usage | measure Disk I/Os. |
-| [dummy](https://docs.fluentbit.io/manual/input/dummy) | Dummy | generate dummy event. |
-| [exec](https://docs.fluentbit.io/manual/input/exec) | Exec | executes external program and collects event logs. |
-| [forward](https://docs.fluentbit.io/manual/input/forward) | Forward | Fluentd forward protocol. |
-| [head](https://docs.fluentbit.io/manual/input/head) | Head | read first part of files. |
-| [health](https://docs.fluentbit.io/manual/input/health) | Health | Check health of TCP services. |
-| [kmsg](https://docs.fluentbit.io/manual/input/kmsg) | Kernel Log Buffer | read the Linux Kernel log buffer messages. |
-| [mem](https://docs.fluentbit.io/manual/input/mem) | Memory Usage | measure the total amount of memory used on the system. |
-| [mqtt](https://docs.fluentbit.io/manual/input/mqtt) | MQTT | start a MQTT server and receive publish messages. |
-| [netif](https://docs.fluentbit.io/manual/input/netif) | Network Traffic | measure network traffic. |
-| [proc](https://docs.fluentbit.io/manual/input/proc) | Process | Check health of Process. |
-| [random](https://docs.fluentbit.io/manual/input/random) | Random | Generate Random samples. |
-| [serial](https://docs.fluentbit.io/manual/input/serial) | Serial Interface | read data information from the serial interface. |
-| [stdin](https://docs.fluentbit.io/manual/input/stdin) | Standard Input | read data from the standard input. |
-| [syslog](https://docs.fluentbit.io/manual/input/syslog) | Syslog | read syslog messages from a Unix socket. |
-| [systemd](https://docs.fluentbit.io/manual/input/systemd) | Systemd | read logs from Systemd/Journald. |
-| [tail](https://docs.fluentbit.io/manual/input/tail) | Tail | Tail log files. |
-| [tcp](https://docs.fluentbit.io/manual/input/tcp) | TCP | Listen for JSON messages over TCP. |
-| [thermal](https://docs.fluentbit.io/manual/input/thermal) | Thermal | measure system temperature(s). |
+| [collectd](https://docs.fluentbit.io/manual/input/collectd.md) | Collectd | Listen for UDP packets from Collectd. |
+| [cpu](https://docs.fluentbit.io/manual/input/cpu.md) | CPU Usage | measure total CPU usage of the system. |
+| [disk](https://docs.fluentbit.io/manual/input/disk.md) | Disk Usage | measure Disk I/Os. |
+| [dummy](https://docs.fluentbit.io/manual/input/dummy.md) | Dummy | generate dummy event. |
+| [exec](https://docs.fluentbit.io/manual/input/exec.md) | Exec | executes external program and collects event logs. |
+| [forward](https://docs.fluentbit.io/manual/input/forward.md) | Forward | Fluentd forward protocol. |
+| [head](https://docs.fluentbit.io/manual/input/head.md) | Head | read first part of files. |
+| [health](https://docs.fluentbit.io/manual/input/health.md) | Health | Check health of TCP services. |
+| [kmsg](https://docs.fluentbit.io/manual/input/kmsg.md) | Kernel Log Buffer | read the Linux Kernel log buffer messages. |
+| [mem](https://docs.fluentbit.io/manual/input/mem.md) | Memory Usage | measure the total amount of memory used on the system. |
+| [mqtt](https://docs.fluentbit.io/manual/input/mqtt.md) | MQTT | start a MQTT server and receive publish messages. |
+| [netif](https://docs.fluentbit.io/manual/input/netif.md) | Network Traffic | measure network traffic. |
+| [proc](https://docs.fluentbit.io/manual/input/proc.md) | Process | Check health of Process. |
+| [random](https://docs.fluentbit.io/manual/input/random.md) | Random | Generate Random samples. |
+| [serial](https://docs.fluentbit.io/manual/input/serial.md) | Serial Interface | read data information from the serial interface. |
+| [stdin](https://docs.fluentbit.io/manual/input/stdin.md) | Standard Input | read data from the standard input. |
+| [syslog](https://docs.fluentbit.io/manual/input/syslog.md) | Syslog | read syslog messages from a Unix socket. |
+| [systemd](https://docs.fluentbit.io/manual/input/systemd.md) | Systemd | read logs from Systemd/Journald. |
+| [tail](https://docs.fluentbit.io/manual/input/tail.md) | Tail | Tail log files |
+| [tcp](https://docs.fluentbit.io/manual/input/tcp.md) | TCP | Listen for JSON messages over TCP. |
+| [thermal](https://docs.fluentbit.io/manual/input/thermal.md) | Thermal | measure system temperature(s). |
 
 #### Filter Plugins
 
 | name | title | description |
 | :--- | :--- | :--- |
-| [grep](https://docs.fluentbit.io/manual/filter/grep) | Grep | Match or exclude specific records by patterns. |
-| [kubernetes](https://docs.fluentbit.io/manual/filter/kubernetes) | Kubernetes | Enrich logs with Kubernetes Metadata. |
-| [lua](https://docs.fluentbit.io/manual/filter/lua) | Lua | Filter records using Lua Scripts. |
-| [parser](https://docs.fluentbit.io/manual/filter/parser) | Parser | Parse record. |
-| [record\_modifier](https://docs.fluentbit.io/manual/filter/record_modifier) | Record Modifier | Modify record. |
-| [stdout](https://docs.fluentbit.io/manual/filter/stdout) | Stdout | Print records to the standard output interface. |
-| [throttle](https://docs.fluentbit.io/manual/filter/throttle) | Throttle | Apply rate limit to event flow. |
-| [nest](https://docs.fluentbit.io/manual/filter/nest) | Nest | Nest records under a specified key |
-| [modify](https://docs.fluentbit.io/manual/filter/modify) | Modify | Modifications to record. |
+| [grep](https://docs.fluentbit.io/manual/filter/grep.md) | Grep | Match or exclude specific records by patterns. |
+| [kubernetes](https://docs.fluentbit.io/manual/filter/kubernetes.md) | Kubernetes | Enrich logs with Kubernetes Metadata. |
+| [lua](https://docs.fluentbit.io/manual/filter/lua.md) | Lua | Filter records using Lua Scripts. |
+| [parser](https://docs.fluentbit.io/manual/filter/parser.md) | Parser | Parse record. |
+| [record\_modifier](https://docs.fluentbit.io/manual/filter/record_modifier.md) | Record Modifier | Modify record. |
+| [stdout](https://docs.fluentbit.io/manual/filter/stdout.md) | Stdout | Print records to the standard output interface. |
+| [throttle](https://docs.fluentbit.io/manual/filter/throttle.md) | Throttle | Apply rate limit to event flow. |
+| [nest](https://docs.fluentbit.io/manual/filter/nest.md) | Nest | Nest records under a specified key |
+| [modify](https://docs.fluentbit.io/manual/filter/modify.md) | Modify | Modifications to record. |
 
 #### Output Plugins
 
 | name | title | description |
 | :--- | :--- | :--- |
-| [azure](https://docs.fluentbit.io/manual/output/azure) | Azure Log Analytics | Ingest records into Azure Log Analytics |
-| [bigquery](https://docs.fluentbit.io/manual/output/bigquery) | BigQuery | Ingest records into Google BigQuery |
-| [counter](https://docs.fluentbit.io/manual/output/counter) | Count Records | Simple records counter. |
-| [datadog](https://docs.fluentbit.io/manual/output/datadog) | Datadog | Ingest logs into Datadog. |
-| [es](https://docs.fluentbit.io/manual/output/elasticsearch) | Elasticsearch | flush records to a Elasticsearch server. |
-| [file](https://docs.fluentbit.io/manual/output/file) | File | Flush records to a file. |
-| [flowcounter](https://docs.fluentbit.io/manual/output/flowcounter) | FlowCounter | Count records. |
-| [forward](https://docs.fluentbit.io/manual/output/forward) | Forward | Fluentd forward protocol. |
-| [http](https://docs.fluentbit.io/manual/output/http) | HTTP | Flush records to an HTTP end point. |
-| [influxdb](https://docs.fluentbit.io/manual/output/influxdb) | InfluxDB | Flush records to InfluxDB time series database. |
-| [kafka](https://docs.fluentbit.io/manual/output/kafka) | Apache Kafka | Flush records to Apache Kafka |
-| [kafka-rest](https://docs.fluentbit.io/manual/output/kafka-rest-proxy) | Kafka REST Proxy | Flush records to a Kafka REST Proxy server. |
-| [stackdriver](https://docs.fluentbit.io/manual/output/stackdriver) | Google Stackdriver Logging | Flush records to Google Stackdriver Logging service. |
-| [stdout](https://docs.fluentbit.io/manual/output/stdout) | Standard Output | Flush records to the standard output. |
-| [splunk](https://docs.fluentbit.io/manual/output/splunk) | Splunk | Flush records to a Splunk Enterprise service |
-| [tcp](https://docs.fluentbit.io/manual/output/tcp) | TCP & TLS | flush records to a TCP server. |
-| [td](https://docs.fluentbit.io/manual/output/td) | [Treasure Data](http://www.treasuredata.com) | Flush records to the [Treasure Data](http://www.treasuredata.com) cloud service for analytics. |
-| [nats](https://docs.fluentbit.io/manual/output/nats) | NATS | flush records to a NATS server. |
-| [null](https://docs.fluentbit.io/manual/output/null) | NULL | throw away events. |
+| [azure](https://docs.fluentbit.io/manual/output/azure.md) | Azure Log Analytics | Ingest records into Azure Log Analytics |
+| [bigquery](https://docs.fluentbit.io/manual/output/bigquery.md) | BigQuery | Ingest records into Google BigQuery |
+| [counter](https://docs.fluentbit.io/manual/output/counter.md) | Count Records | Simple records counter. |
+| [datadog](https://docs.fluentbit.io/manual/output/datadog.md) | Datadog | Ingest logs into Datadog. |
+| [es](https://docs.fluentbit.io/manual/output/elasticsearch.md) | Elasticsearch | flush records to a Elasticsearch server. |
+| [file](https://docs.fluentbit.io/manual/output/file.md) | File | Flush records to a file. |
+| [flowcounter](https://docs.fluentbit.io/manual/output/flowcounter.md) | FlowCounter | Count records. |
+| [forward](https://docs.fluentbit.io/manual/output/forward.md) | Forward | Fluentd forward protocol. |
+| [http](https://docs.fluentbit.io/manual/output/http.md) | HTTP | Flush records to an HTTP end point. |
+| [influxdb](https://docs.fluentbit.io/manual/output/influxdb.md) | InfluxDB | Flush records to InfluxDB time series database. |
+| [kafka](https://docs.fluentbit.io/manual/output/kafka.md) | Apache Kafka | Flush records to Apache Kafka |
+| [kafka-rest](https://docs.fluentbit.io/manual/output/kafka-rest-proxy.md) | Kafka REST Proxy | Flush records to a Kafka REST Proxy server. |
+| [stackdriver](https://docs.fluentbit.io/manual/output/stackdriver.md) | Google Stackdriver Logging | Flush records to Google Stackdriver Logging service. |
+| [stdout](https://docs.fluentbit.io/manual/output/stdout.md) | Standard Output | Flush records to the standard output. |
+| [splunk](https://docs.fluentbit.io/manual/output/splunk.md) | Splunk | Flush records to a Splunk Enterprise service |
+| [tcp](https://docs.fluentbit.io/manual/output/tcp.md) | TCP & TLS | flush records to a TCP server. |
+| [td](https://docs.fluentbit.io/manual/output/td.md) | [Treasure Data](http://www.treasuredata.com) | Flush records to the [Treasure Data](http://www.treasuredata.com) cloud service for analytics. |
+| [nats](https://docs.fluentbit.io/manual/output/nats.md) | NATS | flush records to a NATS server. |
+| [null](https://docs.fluentbit.io/manual/output/null.md) | NULL | throw away events. |
 
 ## Contributing
 

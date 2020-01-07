@@ -53,15 +53,16 @@ static int configure(struct flb_out_fcount_config *ctx,
                      struct flb_output_instance   *ins,
                      struct flb_config *config)
 {
+    const char* pval = NULL;
     int i;
     time_t base = time(NULL);
-    const char* pval = NULL;
 
     /* default */
     ctx->unit = FLB_UNIT_MIN;
     ctx->tick         = 60;
 
     pval = flb_output_get_property("unit", ins);
+
     if (pval != NULL) {
         /* check unit of duration */
         if (!strcasecmp(pval, FLB_UNIT_SEC)) {
@@ -77,7 +78,7 @@ static int configure(struct flb_out_fcount_config *ctx,
             ctx->tick = 86400;
         }
     }
-
+    
     pval = flb_output_get_property("event_based", ins);
     if (pval != NULL && flb_utils_bool(pval)) {
         ctx->event_based = FLB_TRUE;
@@ -93,15 +94,10 @@ static int configure(struct flb_out_fcount_config *ctx,
     flb_debug("[%s]buffer size=%d",PLUGIN_NAME, ctx->size);
 
     ctx->index = 0;
-    ctx->buf = (struct flb_out_fcount_buffer *)
+    ctx->buf = (struct flb_out_fcount_buffer*)
         flb_malloc(sizeof(struct flb_out_fcount_buffer)*ctx->size);
 
-    if (!ctx->buf) {
-        flb_errno();
-        return -1;
-    }
-
-    for (i = 0; i < ctx->size; i++) {
+    for (i=0; i<ctx->size; i++) {
         ctx->buf[i].until = base + ctx->tick*i;
         count_initialized(&ctx->buf[i]);
     }

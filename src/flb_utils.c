@@ -585,11 +585,8 @@ int flb_utils_write_str(char *buf, int *off, size_t size,
         }
         else if (c >= 0x80 && c <= 0xFFFF) {
             hex_bytes = flb_utf8_len(str + i);
-            if (available - written < 6) {
+            if ((available - written) < (2 + hex_bytes)) {
                 return FLB_FALSE;
-            }
-            if (i + hex_bytes > str_len) {
-                break; /* skip truncated UTF-8 */
             }
 
             state = FLB_UTF8_ACCEPT;
@@ -615,11 +612,8 @@ int flb_utils_write_str(char *buf, int *off, size_t size,
         }
         else if (c > 0xFFFF) {
             hex_bytes = flb_utf8_len(str + i);
-            if (available - written < 6) {
+            if ((available - written) < (4 + hex_bytes)) {
                 return FLB_FALSE;
-            }
-            if (i + hex_bytes > str_len) {
-                break; /* skip truncated UTF-8 */
             }
 
             state = FLB_UTF8_ACCEPT;

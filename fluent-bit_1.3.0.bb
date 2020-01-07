@@ -16,13 +16,13 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=2ee41112a44fe7014dce33e26468ba93"
 SECTION = "net"
 
 PR = "r0"
-PV = "1.3.5"
+PV = "1.3.0"
 
 SRCREV = "v${PV}"
 SRC_URI = "git://github.com/fluent/fluent-bit.git;nobranch=1"
 
 S = "${WORKDIR}/git"
-DEPENDS = "zlib bison-native flex-native"
+DEPENDS = "zlib bison flex"
 INSANE_SKIP_${PN}-dev += "dev-elf"
 
 # Use CMake 'Unix Makefiles' generator
@@ -49,5 +49,5 @@ EXTRA_OECMAKE += "-DFLB_SHARED_LIB=Off -DFLB_EXAMPLES=Off "
 
 inherit cmake systemd
 
-SYSTEMD_SERVICE_${PN} = "fluent-bit.service"
+SYSTEMD_SERVICE_${PN} = "td-agent-bit.service"
 TARGET_CC_ARCH_append = " ${SELECTED_OPTIMIZATION}"
