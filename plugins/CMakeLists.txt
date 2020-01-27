@@ -137,6 +137,7 @@ REGISTER_IN_PLUGIN("in_head")
 REGISTER_IN_PLUGIN("in_health")
 REGISTER_IN_PLUGIN("in_http")
 REGISTER_IN_PLUGIN("in_collectd")
+REGISTER_IN_PLUGIN("in_statsd")
 REGISTER_IN_PLUGIN("in_storage_backlog")
 
 if (FLB_STREAM_PROCESSOR)
@@ -209,6 +210,7 @@ if(FLB_LUAJIT)
 endif()
 
 REGISTER_FILTER_PLUGIN("filter_record_modifier")
+REGISTER_FILTER_PLUGIN("filter_aws")
 
 # Register external input and output plugins
 if(EXT_IN_PLUGINS)

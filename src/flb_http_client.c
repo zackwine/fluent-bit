@@ -430,6 +430,61 @@ static int proxy_parse(const char *proxy, struct flb_http_client *c)
     return 0;
 }
 
+static int add_host_and_content_length(struct flb_http_client *c)
+{
+    int len;
+    flb_sds_t tmp;
+    flb_sds_t host;
+    char *out_host;
+    int out_port;
+    struct flb_upstream *u = c->u_conn->u;
+
+    if (!c->host) {
+        out_host = u->tcp_host;
+    }
+    else {
+        out_host = (char *) c->host;
+    }
+
+    len = strlen(out_host);
+    host = flb_sds_create_size(len + 32);
+    if (!host) {
+        flb_error("[http_client] cannot create temporal buffer");
+        return -1;
+    }
+
+    if (c->port == 0) {
+        out_port = u->tcp_port;
+    }
+    else {
+        out_port = c->port;
+    }
+
+    tmp = flb_sds_printf(&host, "%s:%i", out_host, out_port);
+    if (!tmp) {
+        flb_sds_destroy(host);
+        flb_error("[http_client] cannot compose temporary host header");
+        return -1;
+    }
+
+    flb_http_add_header(c, "Host", 4, host, flb_sds_len(host));
+    flb_sds_destroy(host);
+
+    /* Content-Length */
+    if (c->body_len >= 0) {
+        tmp = flb_malloc(32);
+        if (!tmp) {
+            flb_errno();
+            return -1;
+        }
+        len = snprintf(tmp, sizeof(tmp) - 1, "%i", c->body_len);
+        flb_http_add_header(c, "Content-Length", 14, tmp, len);
+        flb_free(tmp);
+    }
+
+    return 0;
+}
+
 struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
                                         int method, const char *uri,
                                         const char *body, size_t body_len,
@@ -441,19 +496,12 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
     char *buf = NULL;
     char *str_method = NULL;
     char *fmt_plain =                           \
-        "%s %s HTTP/1.%i\r\n"
-        "Host: %s:%i\r\n"
-        "Content-Length: %i\r\n";
-    char *fmt_vanilla =                         \
         "%s %s HTTP/1.%i\r\n";
     char *fmt_proxy =                           \
         "%s http://%s:%i/%s HTTP/1.%i\r\n"
-        "Host: %s:%i\r\n"
-        "Proxy-Connection: KeepAlive\r\n"
-        "Content-Length: %i\r\n";
+        "Proxy-Connection: KeepAlive\r\n";
 
     struct flb_http_client *c;
-    struct flb_upstream *u = u_conn->u;
 
     switch (method) {
     case FLB_HTTP_GET:
@@ -477,17 +525,15 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
     }
 
     /* FIXME: handler for HTTPS proxy */
-    if (!proxy && host && port) {
+    if (!proxy) {
         ret = snprintf(buf, FLB_HTTP_BUF_SIZE,
                        fmt_plain,
                        str_method,
                        uri,
                        flags & FLB_HTTP_10 ? 0 : 1,
-                       u->tcp_host,
-                       u->tcp_port,
                        body_len);
     }
-    else if (host && port > 0) {
+    else {
         ret = snprintf(buf, FLB_HTTP_BUF_SIZE,
                        fmt_proxy,
                        str_method,
@@ -495,16 +541,7 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
                        host,
                        port,
                        "",
-                       host,
-                       port,
                        body_len);
-    }
-    else {
-        ret = snprintf(buf, FLB_HTTP_BUF_SIZE,
-                       fmt_vanilla,
-                       str_method,
-                       uri,
-                       flags & FLB_HTTP_10 ? 0 : 1);
     }
 
     if (ret == -1) {
@@ -553,6 +590,8 @@ struct flb_http_client *flb_http_client(struct flb_upstream_conn *u_conn,
         c->body_buf = body;
         c->body_len = body_len;
     }
+
+    add_host_and_content_length(c);
 
     /* Check proxy data */
     if (proxy) {
@@ -763,13 +802,13 @@ static int http_header_push(struct flb_http_client *c, struct flb_kv *header)
     return 0;
 }
 
-
 static int http_headers_compose(struct flb_http_client *c)
 {
     int ret;
     struct mk_list *head;
     struct flb_kv *header;
 
+    /* Push header list to one buffer */
     mk_list_foreach(head, &c->headers) {
         header = mk_list_entry(head, struct flb_kv, _head);
         ret = http_header_push(c, header);
