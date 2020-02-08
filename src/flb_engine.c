@@ -542,10 +542,18 @@ int flb_engine_start(struct flb_config *config)
                                                  &config->event_shutdown);
                     }
 
-                    int c = flb_task_running_count(config);
-                    if (c > 0) {
-                        flb_warn("[engine] shutting down but %i task(s) are running."
-                                 "Grace period extended.", c);
+                    /*
+                     * Grace period has finished, but we need to check if there is
+                     * any pending running task. A running task is associated to an
+                     * output co-routine, since we don't know what's the state or
+                     * resources allocated by that co-routine, the best thing is to
+                     * wait again for the grace period and re-check again.
+                     */
+                    ret = flb_task_running_count(config);
+                    if (ret > 0) {
+                        flb_warn("[engine] shutdown delayed, grace period has "
+                                 "finished but some tasks are still running.");
+                        flb_task_running_print(config);
                         flb_engine_exit(config);
                     }
                     else {
