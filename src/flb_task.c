@@ -267,6 +267,21 @@ static struct flb_task *task_alloc(struct flb_config *config)
     return task;
 }
 
+/* Return the number of tasks with 'running status' */
+int flb_task_running_count(struct flb_config *config)
+{
+    int count = 0;
+    struct mk_list *head;
+    struct flb_input_instance *ins;
+
+    mk_list_foreach(head, &config->inputs) {
+        ins = mk_list_entry(head, struct flb_input_instance, _head);
+        count += mk_list_size(&ins->tasks);
+    }
+
+    return count;
+}
+
 /* Create an engine task to handle the output plugin flushing work */
 struct flb_task *flb_task_create(uint64_t ref_id,
                                  const char *buf,

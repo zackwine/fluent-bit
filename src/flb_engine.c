@@ -527,13 +527,12 @@ int flb_engine_start(struct flb_config *config)
                 if (ret == FLB_ENGINE_STOP) {
                     /*
                      * We are preparing to shutdown, we give a graceful time
-                     * of (default 5) seconds to process any pending event.
+                     * of 'config->grace' seconds to process any pending event.
                      */
                     event = &config->event_shutdown;
                     event->mask = MK_EVENT_EMPTY;
                     event->status = MK_EVENT_NONE;
                     config->shutdown_fd = mk_event_timeout_create(evl, config->grace, 0, event);
-
                     flb_warn("[engine] service will stop in %u seconds", config->grace);
                 }
                 else if (ret == FLB_ENGINE_SHUTDOWN) {
@@ -541,6 +540,12 @@ int flb_engine_start(struct flb_config *config)
                     if (config->shutdown_fd > 0) {
                         mk_event_timeout_destroy(config->evl,
                                                  &config->event_shutdown);
+                    }
+
+                    int c = flb_task_running_count(config);
+                    if (c > 0) {
+                        flb_warn("shutting down but %i tasks are running", c);
+                        sleep(1);
                     }
                     return flb_engine_shutdown(config);
                 }
