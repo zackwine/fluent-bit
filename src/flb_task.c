@@ -303,7 +303,7 @@ int flb_task_running_print(struct flb_config *config)
     mk_list_foreach(head, &config->inputs) {
         ins = mk_list_entry(head, struct flb_input_instance, _head);
         count = mk_list_size(&ins->tasks);
-        flb_info("[task] input %s/%s has %i pending tasks:",
+        flb_info("[task] %s/%s has %i pending task(s):",
                  ins->p->name, flb_input_name(ins), count);
         mk_list_foreach(t_head, &ins->tasks) {
             task = mk_list_entry(t_head, struct flb_task, _head);
@@ -321,7 +321,8 @@ int flb_task_running_print(struct flb_config *config)
                 routes = tmp;
             }
 
-            flb_info("[task]  - id=%i still running on route(s): %s", routes);
+            flb_info("[task]   task_id=%i still running on route(s): %s",
+                     task->id, routes);
             flb_sds_len_set(routes, 0);
         }
     }
