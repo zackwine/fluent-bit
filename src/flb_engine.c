@@ -544,10 +544,13 @@ int flb_engine_start(struct flb_config *config)
 
                     int c = flb_task_running_count(config);
                     if (c > 0) {
-                        flb_warn("shutting down but %i tasks are running", c);
-                        sleep(1);
+                        flb_warn("[engine] shutting down but %i task(s) are running."
+                                 "Grace period extended.", c);
+                        flb_engine_exit(config);
                     }
-                    return flb_engine_shutdown(config);
+                    else {
+                        return flb_engine_shutdown(config);
+                    }
                 }
             }
             else if (event->type & FLB_ENGINE_EV_SCHED) {
