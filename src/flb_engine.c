@@ -520,8 +520,6 @@ int flb_engine_start(struct flb_config *config)
     flb_engine_started(config);
 
     while (1) {
-                        flb_task_running_print(config);
-
         mk_event_wait(evl);
         mk_event_foreach(event, evl) {
             if (event->type == FLB_ENGINE_EV_CORE) {
