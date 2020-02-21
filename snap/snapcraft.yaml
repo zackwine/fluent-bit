@@ -21,6 +21,7 @@ parts:
     source-branch: snap
     source-type: git
     plugin: cmake
+    disable-parallel: True
     stage-packages:
         - libsasl2-2
         - libssl1.1
@@ -28,6 +29,8 @@ parts:
         - g++
         - make
         - autoconf
+        - automake
+        - autotools-dev
         - libsasl2-dev
         - libsystemd-dev
         - flex
