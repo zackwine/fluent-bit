@@ -27,6 +27,7 @@ parts:
     build-packages:
         - g++
         - make
+        - autoconf
         - libsasl2-dev
         - libsystemd-dev
         - flex
