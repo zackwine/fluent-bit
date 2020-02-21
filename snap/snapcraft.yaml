@@ -18,6 +18,7 @@ apps:
 parts:
   fluent-bit:
     source: https://github.com/fluent/fluent-bit
+    source-branch: snap
     source-type: git
     plugin: cmake
     stage-packages:
