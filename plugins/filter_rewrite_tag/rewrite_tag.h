@@ -45,6 +45,7 @@ struct flb_rewrite_tag {
     struct flb_input_instance *ins_emitter; /* emitter input plugin instance */
     struct flb_filter_instance *ins;        /* self-filter instance */
     struct flb_config *config;              /* Fluent Bit context */
+    flb_sds_t emitter_buffer_limit;         /* Emitter buffer limit for rewrite tag */
 };
 
 /* Register external function to emit records, check 'plugins/in_emitter' */

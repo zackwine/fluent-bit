@@ -58,6 +58,15 @@ static int emitter_create(struct flb_rewrite_tag *ctx)
                      ins->name);
     }
 
+    /* Set the mem_buf_limit */
+    if(ctx->emitter_buffer_limit) {
+        ret = flb_input_set_property(ins, "mem_buf_limit", ctx->emitter_buffer_limit);
+        if (ret == -1) {
+            flb_plg_warn(ctx->ins,
+                        "cannot set mem_buf_limit");
+        }
+    }
+
     /* Initialize emitter plugin */
     ret = flb_input_instance_init(ins, ctx->config);
     if (ret == -1) {
@@ -408,6 +417,11 @@ static struct flb_config_map config_map[] = {
      FLB_CONFIG_MAP_STR, "emitter_name", NULL,
      FLB_FALSE, FLB_TRUE, offsetof(struct flb_rewrite_tag, emitter_name),
      NULL
+    },
+    {
+     FLB_CONFIG_MAP_STR, "emitter_buffer_limit", NULL,
+     FLB_FALSE, FLB_TRUE, offsetof(struct flb_rewrite_tag, emitter_buffer_limit),
+     "set a memory buffer limit to restrict memory usage of emitter"
     },
     /* EOF */
     {0}
